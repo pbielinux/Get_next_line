@@ -1,5 +1,3 @@
-# include <stdio.h>
-# include <fcntl.h>
 #include "get_next_line.h"
 
 size_t	ft_strlen(const char *str)
