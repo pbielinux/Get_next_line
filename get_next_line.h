@@ -6,7 +6,7 @@
 # include <fcntl.h>
 # include <unistd.h>
 # define FD_SIZE 4096
-//# define BUFFER_SIZE 8
+# define BUFFER_SIZE 8
 
 int	get_next_line(int fd, char **line);
 size_t	ft_strlen(const char *str);
@@ -15,5 +15,6 @@ char	*ft_strdup(const char *str);
 char	*ft_strjoin(const char *s1, const char *s2);
 char	*ft_strchr(const char *str, int c);
 char	*ft_substr(const char *s, unsigned int start, size_t len);
+void	*ft_memset(void *str, char c, size_t n);
 
 #endif
