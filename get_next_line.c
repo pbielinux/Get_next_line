@@ -95,6 +95,17 @@ char	*ft_strjoin(const char *s1, const char *s2)
 	return (new);
 }
 
+char	*ft_strndup(const char *str, size_t n)
+{
+	char *copy;
+
+	if (!(copy = (char *)malloc(sizeof(char) * n + 1)))
+		return (NULL);
+	ft_memcpy(copy, str, n);
+	copy[n] = '\0';
+	return (copy);
+}
+
 char	*ft_strchr(const char *str, int c)
 {
 	while (*str)
@@ -106,6 +117,20 @@ char	*ft_strchr(const char *str, int c)
 	if ((char)c == '\0')
 		return ((char *)str);
 	return (NULL);
+}
+
+int	ft_strcmp(const char *str1, const char *str2)
+{
+	size_t i;
+
+	i = 0;
+	while (str1[i] && str2[i])
+	{
+		if (str1[i] != str2[i])
+			return ((unsigned char)str1[i] - (unsigned char)str2[i]);
+		i++;
+	}
+	return (0);
 }
 
 char	*ft_substr(const char *s, unsigned int start, size_t len)
@@ -137,62 +162,70 @@ char	*ft_substr(const char *s, unsigned int start, size_t len)
 }
 
 
-int	gnl_read_file(int fd, char *heap, char **stack)
-{
-	char	*tmp_stack;
-	int		ret;
 
-	while (!(ft_strchr(stack, '\n')))
+// Change return type to take advantage of that system calls of read behaves like static variables.
+// if the EOF was reached in a previous call, gnl_read_file will return 0;
+char	*gnl_read_file(int fd)
+{
+	// Transfer Stack to main to have a way to avoid calling the read if not neeeded
+	// (like when stack already holds a newline from previous call)
+
+	static	char	*stack[FD_SIZE]; //Move to main
+	char			*heap; //Heap can stay
+	char			*tmp_stack;
+	char			*tmp2;
+	int				ret;
+	int 			i;
+
+	if (!stack[fd])
+		stack[fd] = malloc(sizeof(char *) * 2);
+	heap = malloc(sizeof(char) * (BUFFER_SIZE + 1));
+
+	while (!(ft_strchr(stack[fd], '\n'))) //condition this while in ret > 0
 	{
 		ret = read(fd, heap, BUFFER_SIZE);
 		heap[ret] = '\0';
-		if (!(stack))
-			stack = ft_strdup(heap);
+		if (!(stack[fd]))
+			stack[fd] = ft_strdup(heap);
 		else
 		{
-			tmp_stack = stack;
-			stack = ft_strjoin(tmp_stack, heap);
+			tmp_stack = stack[fd];
+			stack[fd] = ft_strjoin(tmp_stack, heap);
 		}
-		if (stack[0] == '\0' || ret == 0)
-			return (0);
+		if (stack[fd] == '\0')
+			return ("");
+		if (ret == 0) //this break have to be called if ret == 0 || stack already had a \n f the stack
+			break;
 	}
-	return (1);
+
+
+	/* Create a function for this purpose and call at main */
+	// Clear the Stack before return //
+	i = 0;
+	while (stack[fd][i] != '\n')
+		i++;
+	tmp2 = ft_strdup(&(stack[fd][i + 1]));
+	stack[fd] = tmp2;
+	free (tmp2);
+	if (ret == 0 && !(ft_strcmp(stack[fd], tmp_stack)))
+		return (NULL);
+	return (tmp_stack);
 }
 
-int	get_next_line(int fd, char **line)
+int		get_next_line(int fd, char **line)
 {
-	static	char	*stack[FD_SIZE];
-	char			*heap;
-	char			*tmp;
-	int				i;
 
-	stack[fd] = malloc(sizeof(char *) * 2);
-
-	if (read(fd, 0, 0) == -1 || !(heap = malloc(sizeof(char) * (BUFFER_SIZE + 1))))
+	if (read(fd, 0, 0) == -1)
 		return (-1);
 
-	if (gnl_read_file(fd, heap, &stack[fd][0]))
-	{
-		i = 0;
-		while (stack[fd][i])
-		{
-			if (stack[fd][i] == '\n')
-			{
-				*line = ft_substr(stack[fd], 0, i);
-				tmp = stack[fd];
-				stack[fd] = ft_strdup(tmp + i + 1);
-				return (1);
-			}
-			i++;
-		}
-		return (1);
-	}
-	else
-	{
-		if(!(*line = stack[fd]))
-			line = "";
-		return (0);
-	}
+	//if stack have something, check if has a \n, if not call read
+	ret = gnl_read_file(fd);
+
+	//if ret == 0 && stack have something -> line becomes stack
+
+	//line becomes stack until the \n
+	//clear the char after \n from stack
+	//return (1)
 
 }
 
@@ -203,6 +236,8 @@ int main()
 	char *line;
 
 	fd = open("/Users/pbielik/Desktop/Get_next_line/gnlTester/files/41_with_nl", O_RDONLY);
+	get_next_line(fd, &line);
+	printf("%s\n", line);
 	get_next_line(fd, &line);
 	printf("%s\n", line);
 	get_next_line(fd, &line);
