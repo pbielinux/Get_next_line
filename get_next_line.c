@@ -12,21 +12,7 @@
 
 #include "get_next_line.h"
 
-void	*ft_memset(void *str, char c, size_t n)
-{
-	size_t	i;
-	char	*s;
-
-	s = (char*)str;
-	i = 0;
-	while (i < n)
-	{
-		s[i] = c;
-		i++;
-	}
-	return (s);
-}
-
+/*
 size_t	ft_strlen(const char *str)
 {
 	size_t i;
@@ -68,6 +54,21 @@ char	*ft_strdup(const char *str)
 	return (copy);
 }
 
+char	*ft_strcdup(const char *str, char c)
+{
+	size_t	len;
+	char	*copy;
+
+	len = 0;
+	while (str[len] != c)
+		len++;
+	if (!(copy = malloc((unsigned int)len + 1)))
+		return (NULL);
+	ft_memcpy(copy, str, len);
+	copy[len + 1] = '\0';
+	return (copy);
+}
+
 char	*ft_strjoin(const char *s1, const char *s2)
 {
 	size_t	i;
@@ -95,17 +96,6 @@ char	*ft_strjoin(const char *s1, const char *s2)
 	return (new);
 }
 
-char	*ft_strndup(const char *str, size_t n)
-{
-	char *copy;
-
-	if (!(copy = (char *)malloc(sizeof(char) * n + 1)))
-		return (NULL);
-	ft_memcpy(copy, str, n);
-	copy[n] = '\0';
-	return (copy);
-}
-
 char	*ft_strchr(const char *str, int c)
 {
 	while (*str)
@@ -118,131 +108,106 @@ char	*ft_strchr(const char *str, int c)
 		return ((char *)str);
 	return (NULL);
 }
+*/
 
-int	ft_strcmp(const char *str1, const char *str2)
+void	gnl_clear_stack(char **stack)
 {
-	size_t i;
+	int		i;
+	char	*tmp_stack;
 
 	i = 0;
-	while (str1[i] && str2[i])
-	{
-		if (str1[i] != str2[i])
-			return ((unsigned char)str1[i] - (unsigned char)str2[i]);
+	while ((*stack)[i] != '\n')
 		i++;
-	}
-	return (0);
+	tmp_stack = ft_strdup(*stack + i + 1);
+	*stack = ft_strdup(tmp_stack);
+
 }
 
-char	*ft_substr(const char *s, unsigned int start, size_t len)
-{
-	unsigned int	i;
-	unsigned int	min_len;
-	char			*sub;
-
-	if (!s)
-		return (NULL);
-	if (start >= ft_strlen(s) || len <= 0)
-		return (ft_strdup(""));
-	else
-	{
-		min_len = ft_strlen(&s[start]);
-		if (min_len < len)
-			len = min_len;
-		if (!(sub = malloc(sizeof(char) * len + 1)))
-			return (NULL);
-		i = start;
-		while (s[i] && (i - start) < len)
-		{
-			sub[i - start] = s[i];
-			i++;
-		}
-		sub[i - start] = '\0';
-	}
-	return (sub);
-}
-
-
-
-// Change return type to take advantage of that system calls of read behaves like static variables.
 // if the EOF was reached in a previous call, gnl_read_file will return 0;
-char	*gnl_read_file(int fd)
+int		gnl_read_file(int fd, char **stack)
 {
-	// Transfer Stack to main to have a way to avoid calling the read if not neeeded
-	// (like when stack already holds a newline from previous call)
 
-	static	char	*stack[FD_SIZE]; //Move to main
-	char			*heap; //Heap can stay
+	char			*heap; //Heap can stay, ***** Need to be (void *)??? *****
 	char			*tmp_stack;
-	char			*tmp2;
 	int				ret;
-	int 			i;
 
-	if (!stack[fd])
-		stack[fd] = malloc(sizeof(char *) * 2);
 	heap = malloc(sizeof(char) * (BUFFER_SIZE + 1));
 
-	while (!(ft_strchr(stack[fd], '\n'))) //condition this while in ret > 0
+	while ((ret = read(fd, heap, BUFFER_SIZE)) > 0)
 	{
-		ret = read(fd, heap, BUFFER_SIZE);
 		heap[ret] = '\0';
-		if (!(stack[fd]))
-			stack[fd] = ft_strdup(heap);
+		if (!(*stack))
+			*stack = ft_strdup(heap);
 		else
 		{
-			tmp_stack = stack[fd];
-			stack[fd] = ft_strjoin(tmp_stack, heap);
+			tmp_stack = *stack;
+			*stack = ft_strjoin(tmp_stack, heap);
 		}
-		if (stack[fd] == '\0')
-			return ("");
-		if (ret == 0) //this break have to be called if ret == 0 || stack already had a \n f the stack
+		if (ft_strchr(*stack, '\n') || ret < BUFFER_SIZE)
 			break;
 	}
 
+	free (heap);
+	heap = NULL;
 
-	/* Create a function for this purpose and call at main */
-	// Clear the Stack before return //
-	i = 0;
-	while (stack[fd][i] != '\n')
-		i++;
-	tmp2 = ft_strdup(&(stack[fd][i + 1]));
-	stack[fd] = tmp2;
-	free (tmp2);
-	if (ret == 0 && !(ft_strcmp(stack[fd], tmp_stack)))
-		return (NULL);
-	return (tmp_stack);
+	return (ret > 0 ? 1 : 0);
 }
 
 int		get_next_line(int fd, char **line)
 {
+	static	char	*stack[FD_SIZE];
+	int				ret;
 
 	if (read(fd, 0, 0) == -1)
 		return (-1);
 
-	//if stack have something, check if has a \n, if not call read
-	ret = gnl_read_file(fd);
+	ret = gnl_read_file(fd, &stack[fd]);
 
+	if (ret == 0)
+	{
+		if (stack[fd])
+		{
+				*line = stack[fd];
+				free (stack[fd]);
+				stack[fd] = NULL;
+		}
+		else
+			*line = ft_strdup("");
+		return (0);
+	}
+
+	if (ft_strchr(stack[fd], '\n'))
+	{
+		*line = ft_strcdup(stack[fd], '\n');
+		if(*(line[0]) == '\n')
+		{
+			*line=ft_strdup("");
+		}
+		//printf("\n %s \n", *line);
+		gnl_clear_stack(&(stack[fd]));
+		return (1);
+	}
 	//if ret == 0 && stack have something -> line becomes stack
 
-	//line becomes stack until the \n
-	//clear the char after \n from stack
-	//return (1)
 
+	return 0;
 }
-
-
+/*
 int main()
 {
 	int fd;
 	char *line;
 
-	fd = open("/Users/pbielik/Desktop/Get_next_line/gnlTester/files/41_with_nl", O_RDONLY);
-	get_next_line(fd, &line);
-	printf("%s\n", line);
-	get_next_line(fd, &line);
-	printf("%s\n", line);
-	get_next_line(fd, &line);
-	printf("%s\n", line);
+	fd = open("/Users/pbielik/Desktop/Get_next_line/nl", O_RDONLY);
+	printf("\nReturn: %d , Line: %s\n", get_next_line(fd, &line), line);
+	free(line);
+	printf("\nReturn: %d , Line: %s\n", get_next_line(fd, &line), line);
+	if (line)
+		free(line);
+	printf("\nReturn: %d , Line: %s\n", get_next_line(fd, &line), line);
+	free(line);
+
 
 	return 0;
 }
-
+*/

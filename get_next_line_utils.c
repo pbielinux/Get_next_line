@@ -1,20 +1,5 @@
 #include "get_next_line.h"
 
-void	*ft_memset(void *str, char c, size_t n)
-{
-	size_t	i;
-	char	*s;
-
-	s = (char*)str;
-	i = 0;
-	while (i < n)
-	{
-		s[i] = c;
-		i++;
-	}
-	return (s);
-}
-
 size_t	ft_strlen(const char *str)
 {
 	size_t i;
@@ -56,6 +41,21 @@ char	*ft_strdup(const char *str)
 	return (copy);
 }
 
+char	*ft_strcdup(const char *str, char c)
+{
+	size_t	len;
+	char	*copy;
+
+	len = 0;
+	while (str[len] != c)
+		len++;
+	if (!(copy = malloc((unsigned int)len + 1)))
+		return (NULL);
+	ft_memcpy(copy, str, len);
+	copy[len + 1] = '\0';
+	return (copy);
+}
+
 char	*ft_strjoin(const char *s1, const char *s2)
 {
 	size_t	i;
@@ -94,32 +94,4 @@ char	*ft_strchr(const char *str, int c)
 	if ((char)c == '\0')
 		return ((char *)str);
 	return (NULL);
-}
-
-char	*ft_substr(const char *s, unsigned int start, size_t len)
-{
-	unsigned int	i;
-	unsigned int	min_len;
-	char			*sub;
-
-	if (!s)
-		return (NULL);
-	if (start >= ft_strlen(s) || len <= 0)
-		return (ft_strdup(""));
-	else
-	{
-		min_len = ft_strlen(&s[start]);
-		if (min_len < len)
-			len = min_len;
-		if (!(sub = malloc(sizeof(char) * len + 1)))
-			return (NULL);
-		i = start;
-		while (s[i] && (i - start) < len)
-		{
-			sub[i - start] = s[i];
-			i++;
-		}
-		sub[i - start] = '\0';
-	}
-	return (sub);
 }
