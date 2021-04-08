@@ -95,3 +95,46 @@ char	*ft_strchr(const char *str, int c)
 		return ((char *)str);
 	return (NULL);
 }
+
+char	*ft_strcpy(char *dest, const char *src)
+{
+	size_t i;
+
+	i = 0;
+	while (src[i] != '\0')
+	{
+		dest[i] = src[i];
+		i++;
+	}
+	dest[i] = '\0';
+	return (dest);
+}
+
+
+char	*ft_substr(const char *s, unsigned int start, size_t len)
+{
+	unsigned int	i;
+	unsigned int	min_len;
+	char			*sub;
+
+	if (!s)
+		return (NULL);
+	if (start >= ft_strlen(s) || len <= 0)
+		return (ft_strdup(""));
+	else
+	{
+		min_len = ft_strlen(&s[start]);
+		if (min_len < len)
+			len = min_len;
+		if (!(sub = malloc(sizeof(char) * len + 1)))
+			return (NULL);
+		i = start;
+		while (s[i] && (i - start) < len)
+		{
+			sub[i - start] = s[i];
+			i++;
+		}
+		sub[i - start] = '\0';
+	}
+	return (sub);
+}

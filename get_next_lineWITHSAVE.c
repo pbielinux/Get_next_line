@@ -109,6 +109,20 @@ char	*ft_strchr(const char *str, int c)
 	return (NULL);
 }
 
+char	*ft_strcpy(char *dest, const char *src)
+{
+	size_t i;
+
+	i = 0;
+	while (src[i] != '\0')
+	{
+		dest[i] = src[i];
+		i++;
+	}
+	dest[i] = '\0';
+	return (dest);
+}
+
 char	*ft_substr(const char *s, unsigned int start, size_t len)
 {
 	unsigned int	i;
@@ -153,19 +167,15 @@ void	gnl_add_clear(char **stack, char **line, int r)
 	if (i < ft_strlen(*stack))
 	{
 		*line = ft_substr(*stack, 0, i);
-		tmp_stack = ft_substr(*stack, i + 1, ft_strlen(*stack));
-		free(*stack);
+		tmp_stack = ft_substr(*stack, i + 1, sizeof(*stack));
+		free (*stack);
+		*stack = NULL;
 		*stack = ft_strdup(tmp_stack);
 		free (tmp_stack);
 	}
 	else if (r == 0)
 	{
 		*line = ft_substr(*stack, 0, ft_strlen(*stack));
-		if (*stack)
-		{
-			free(*stack);
-			*stack = NULL;
-		}
 	}
 }
 
@@ -183,11 +193,15 @@ int		gnl_read_file(int fd, char **stack)
 	{
 		heap[ret] = '\0';
 		if (!(*stack))
+		{
+			free (*stack);
 			*stack = ft_strdup(heap);
+		}
 		else
 		{
 			tmp_stack = ft_strjoin(*stack, heap);
 			free(*stack);
+			*stack = NULL;
 			*stack = ft_strdup(tmp_stack);
 			free (tmp_stack);
 		}
@@ -195,37 +209,41 @@ int		gnl_read_file(int fd, char **stack)
 			break;
 	}
 	free (heap);
-	return (ret > 0 ? 1 : 0);
+	return (ret);
 }
 
 int		get_next_line(int fd, char **line)
 {
-	static	char	*stack[FD_SIZE];
+	static	char	*save[FD_SIZE];
+	char			*stack;
 	int				ret;
 
 	if (line == NULL || read(fd, 0, 0) == -1 || BUFFER_SIZE < 0)
 		return (-1);
 
-	//if (ft_strchr(stack[fd], '\n'))
-	//{
-	//	gnl_add_clear(&stack[fd], line, ret);
-	//	return (0);
-	//}
+	if (save[fd])
+		stack = ft_strdup(save[fd]);
+	else
+		stack = malloc(1);
 
-	ret = gnl_read_file(fd, &stack[fd]);
+	ret = gnl_read_file(fd, &stack);
 
-	if (ret == 0 && stack[fd] == '\0')
+	if (ret == 0 && stack[0] == '\0')
 	{
 		*line = ft_strdup("");
-		return (1);
+		free (stack);
+		stack = NULL;
+		return (ret);
 	}
 
-	gnl_add_clear(&stack[fd], line, ret);
+	gnl_add_clear(&stack, line, ret);
 
-	if (ret > 0)
-		return (1);
-	else
-		return (0);
+	save[fd] = ft_strdup(stack);
+	free(save[fd]);
+	save[fd] = ft_strcpy(save[fd], stack);
+	free (stack);
+	stack = NULL;
+	return ret;
 }
 
 /*
@@ -234,7 +252,7 @@ int main()
 	int fd;
 	char *line;
 
-	fd = open("/Users/pbielik/Desktop/Get_next_line/41_with_nl", O_RDONLY);
+	fd = open("/Users/pbielik/Desktop/Get_next_line/nl", O_RDONLY);
 	printf("\nReturn: %d , Line: %s\n", get_next_line(fd, &line), line);
 	free(line);
 	printf("\nReturn: %d , Line: %s\n", get_next_line(fd, &line), line);
