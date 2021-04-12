@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*   get_next_line copy.c                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: pbielinux <pbielinux@student.42.fr>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/29 19:30:14 by pbielik           #+#    #+#             */
-/*   Updated: 2021/04/12 11:41:48 by pbielinux        ###   ########.fr       */
+/*   Updated: 2021/04/09 17:48:46 by pbielinux        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,19 +140,33 @@ char	*ft_substr(const char *s, unsigned int start, size_t len)
 
 void	gnl_add_clear(char **stack, char **line, int r)
 {
-	char		*tmp;
+	size_t		i;
+	char		*tmp_stack;
 
-	if (r == 0)
-		*line = ft_strdup(*stack);
-	else
-		*line = ft_substr(*stack, 0, (ft_strchr(*stack, '\n') - *stack));
-
-	if (r > 0)
-		tmp = ft_strdup(*stack + (ft_strlen(*line) + 1));
-	else
-		tmp = ft_strdup(*stack + ft_strlen(*line));
-	free (*stack);
-	*stack = tmp;
+	i = 0;
+	while ((*stack)[i])
+	{
+		if ((*stack)[i] == '\n')
+			break;
+		i++;
+	}
+	if (i < ft_strlen(*stack))
+	{
+		*line = ft_substr(*stack, 0, i);
+		tmp_stack = ft_substr(*stack, i + 1, ft_strlen(*stack));
+		free(*stack);
+		*stack = ft_strdup(tmp_stack);
+		free (tmp_stack);
+	}
+	else if (r == 0)
+	{
+		*line = ft_substr(*stack, 0, ft_strlen(*stack));
+		if (*stack)
+		{
+			free(*stack);
+			*stack = NULL;
+		}
+	}
 }
 
 // if the EOF was reached in a previous call, gnl_read_file will return 0;
@@ -161,21 +175,23 @@ int		gnl_read_file(int fd, char **stack)
 
 	char			*buffer; //Heap can stay, ***** Need to be (void *)??? *****
 	char			*tmp;
-	int				r;
+	int				ret;
 
 	buffer = malloc(sizeof(char *) * (BUFFER_SIZE + 1));
 
-	while (!ft_strchr(*stack, '\n') && (r= read(fd, buffer, BUFFER_SIZE)) > 0)
+	while ((ret = read(fd, buffer, BUFFER_SIZE)) > 0)
 	{
-		buffer[r] = '\0';
+		buffer[ret] = '\0';
 
 		tmp = ft_strjoin(*stack, buffer);
 		free(*stack);
+		*stack = NULL;
 		*stack = tmp;
+		if (ft_strchr(buffer, '\n'))
+			break;
 	}
-
 	free (buffer);
-	return (r);
+	return (ret);
 }
 
 int		get_next_line(int fd, char **line)
@@ -186,17 +202,22 @@ int		get_next_line(int fd, char **line)
 	if (line == NULL || read(fd, 0, 0) == -1 || BUFFER_SIZE < 0)
 		return (-1);
 
-	if (!stack[fd])
+	if (stack[fd] == NULL)
 		stack[fd] = calloc(sizeof(char), sizeof(char));
 
 	ret = gnl_read_file(fd, &stack[fd]);
 
+	if (ret == 0)
+		*line = ft_strdup(stack[fd]);
+	else if
+		*line = ft_substr(stack[fd], 0 , ft_strchr(stack[fd], '\n') - stack[fd])
+
 	gnl_add_clear(&stack[fd], line, ret);
 
-	if (ret == 0)
-		return (0);
-	else
+	if (ret > 0)
 		return (1);
+	else
+		return (0);
 }
 
 /*
